@@ -1,25 +1,24 @@
 // client/src/components/Header.jsx
 
-import React from 'react';
 import { Navbar, Nav, Container } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
-import Marquee from "react-fast-marquee"; // Marquee component for scrolling text
-import ashokaSymbol from '../assets/ashoka.png';
+// STEP 1: Import the image like a module
+import ashokaLogo from '../assets/ashoka.png';
 
 const Header = () => {
   return (
     <header>
-      {/* Main Navbar */}
       <Navbar bg="light" variant="light" expand="lg" collapseOnSelect>
         <Container>
           <LinkContainer to="/">
             <Navbar.Brand>
+              {/* STEP 2: Use the imported variable in the src attribute */}
               <img
-                src={ashokaSymbol}
+                src={ashokaLogo}
                 width="30"
                 height="30"
                 className="d-inline-block align-top"
-                alt="Emblem of India"
+                alt="Ashoka Chakra"
               />{' '}
               Election Commission of India (dApp)
             </Navbar.Brand>
@@ -40,21 +39,6 @@ const Header = () => {
           </Navbar.Collapse>
         </Container>
       </Navbar>
-
-      {/* Scrolling Marquee */}
-      <div className="bg-dark text-white p-2">
-        <Marquee pauseOnHover={true} speed={50}>
-          <span className="mx-4">
-            Ensure your MetaMask wallet is connected to participate in the election.
-          </span>
-          <span className="mx-4">
-            Voting is a secure and transparent process on the blockchain.
-          </span>
-          <span className="mx-4">
-            Only registered voters are eligible to cast their vote.
-          </span>
-        </Marquee>
-      </div>
     </header>
   );
 };
