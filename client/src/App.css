@@ -1,0 +1,37 @@
+/* client/src/App.css */
+
+/* Define our new color theme */
+:root {
+  --primary-color: #FF9933; /* Saffron/Orange */
+  --secondary-color: #138808; /* Green */
+  --light-bg: #f8f9fa;
+  --dark-text: #333;
+}
+
+/* Apply the new font and background color to the whole page */
+body {
+  font-family: 'Poppins', sans-serif !important;
+  background-color: var(--light-bg) !important;
+  color: var(--dark-text);
+}
+
+/* Override Bootstrap's default button colors */
+.btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+.btn-primary:hover {
+  background-color: #e68a2e !important; /* A darker shade for hover */
+  border-color: #e68a2e !important;
+}
+
+.btn-success {
+    background-color: var(--secondary-color) !important;
+    border-color: var(--secondary-color) !important;
+}
+
+/* Style the Navbar to be more prominent */
+header .navbar {
+    border-bottom: 3px solid var(--primary-color);
+}

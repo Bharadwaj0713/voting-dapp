@@ -1,0 +1,18 @@
+/* client/src/pages/HomePage.css */
+
+.display-4 {
+    font-weight: 300;
+}
+
+.card.shadow-sm {
+    transition: all 0.3s ease-in-out;
+}
+
+.card.shadow-sm:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.form-container button {
+    height: 100%;
+}
