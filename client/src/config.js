@@ -1,9 +1,9 @@
 // client/src/config.js
 
 // --- YOUR LIVE SEPOLIA ADDRESSES ---
-export const voterRegistryAddress = "0x0968FA5cAbBB7A28943064c8032197c71863566B";
-export const candidateRegistryAddress = "0x16cA4210aEaFdaE43f2CB0cc53f7d9f17Cc9e956";
-export const votingContractAddress = "0x79c127a876335474Da2115C1B78E9D0414647DF0";
+export const voterRegistryAddress = "0x5ca92Fdc03FDe619BbbB435ebE4FB953B34E24fd";
+export const candidateRegistryAddress = "0xdfa1AA2f69e62f1A57BE8d4AA5CDBfbA82643c6B";
+export const votingContractAddress = "0x7DA8F964942945AefCd659da42F20AcA66f0caE7";
 
 // --- ABIs stay the same, no changes needed below ---
 export const candidateRegistryABI = [
