@@ -1,231 +1,281 @@
-// client/src/pages/HomePage.jsx
+// client/src/screens/HomeScreen.jsx
 
 import { useState, useEffect } from 'react';
+import { Container, Form, Button, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { ethers } from 'ethers';
-import { 
-  candidateRegistryAddress, candidateRegistryABI, 
-  voterRegistryAddress, voterRegistryABI, 
-  votingContractAddress, votingContractABI 
-} from '../config.js';
+import {
+  voterRegistryAddress,
+  candidateRegistryAddress,
+  votingContractAddress,
+  voterRegistryABI,
+  candidateRegistryABI,
+  votingContractABI
+} from '../config';
 
-import { Container, Card, Button, Form, Row, Col, Alert, Spinner } from 'react-bootstrap';
-import './HomePage.css';
-
-// --- SOLUTION: Moved AdminPanel outside of HomePage component ---
-// We now pass all necessary state and functions as props.
-const AdminPanel = ({ 
-  candidateName, 
-  setCandidateName, 
-  voterAddress, 
-  setVoterAddress, 
-  handleTransaction,
-  contracts
-}) => (
-  <Card className="mb-4 shadow-sm">
-    <Card.Header as="h3" className="bg-secondary text-white">Admin Panel</Card.Header>
-    <Card.Body>
-      <Form>
-        <Form.Group as={Row} className="mb-3" controlId="formAddCandidate">
-          <Col sm={9}>
-            <Form.Control 
-              type="text" 
-              placeholder="Enter candidate's name" 
-              value={candidateName} 
-              onChange={(e) => setCandidateName(e.target.value)} 
-            />
-          </Col>
-          <Col sm={3}>
-            <Button 
-              variant="primary" 
-              className="w-100" 
-              onClick={() => handleTransaction(() => contracts.candContract.addCandidate(candidateName), 'Candidate added successfully!')}
-            >
-              Add Candidate
-            </Button>
-          </Col>
-        </Form.Group>
-        <Form.Group as={Row} className="mb-3" controlId="formRegisterVoter">
-          <Col sm={9}>
-            <Form.Control 
-              type="text" 
-              placeholder="Enter voter's address" 
-              value={voterAddress} 
-              onChange={(e) => setVoterAddress(e.target.value)} 
-            />
-          </Col>
-          <Col sm={3}>
-            <Button 
-              variant="info" 
-              className="w-100" 
-              onClick={() => handleTransaction(() => contracts.votContract.addVoter(voterAddress), `Voter ${voterAddress} registered!`)}
-            >
-              Register Voter
-            </Button>
-          </Col>
-        </Form.Group>
-      </Form>
-      <Button 
-        variant="success" 
-        onClick={() => {
-          const duration = prompt("Enter election duration in minutes:");
-          if (duration) handleTransaction(() => contracts.votingCont.startElection(duration), 'Election started!');
-        }}
-      >
-        Start Election
-      </Button>
-    </Card.Body>
-  </Card>
-);
-
-function HomePage() {
+const HomeScreen = () => {
+  const [provider, setProvider] = useState(null);
   const [account, setAccount] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isVoterRegistered, setIsVoterRegistered] = useState(false);
-  const [contracts, setContracts] = useState({});
-  const [candidates, setCandidates] = useState([]);
-  const [candidateName, setCandidateName] = useState('');
   const [voterAddress, setVoterAddress] = useState('');
+  const [candidateName, setCandidateName] = useState('');
+  const [candidates, setCandidates] = useState([]);
+  const [selectedCandidate, setSelectedCandidate] = useState('');
+  const [electionDuration, setElectionDuration] = useState(0);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
 
-  async function setupContracts(signer) {
-    const candContract = new ethers.Contract(candidateRegistryAddress, candidateRegistryABI, signer);
-    const votContract = new ethers.Contract(voterRegistryAddress, voterRegistryABI, signer);
-    const votingCont = new ethers.Contract(votingContractAddress, votingContractABI, signer);
-    setContracts({ candContract, votContract, votingCont });
-    return { candContract, votContract, votingCont };
-  }
-  
-  async function checkUserStatus(userAddress, votContract) {
-    if (userAddress && votContract) {
-      const adminAddress = await votContract.electionAdmin();
-      setIsAdmin(userAddress.toLowerCase() === adminAddress.toLowerCase());
-      const registered = await votContract.isRegisteredVoter(userAddress);
-      setIsVoterRegistered(registered);
-    }
-  }
-
-  async function connectWallet() {
-    if (window.ethereum) {
-      try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const userAddress = await signer.getAddress();
-        setAccount(userAddress);
-        
-        const { votContract } = await setupContracts(signer);
-        await checkUserStatus(userAddress, votContract);
-
-      } catch (err) {
-        console.error("Error connecting wallet:", err);
-      }
-    }
-  }
-
-  useEffect(() => {
-    connectWallet();
-    const handleAccountsChanged = (accounts) => {
-      if (accounts.length > 0) {
-        connectWallet();
+  const connectWallet = async () => {
+    try {
+      if (window.ethereum) {
+        const web3Provider = new ethers.BrowserProvider(window.ethereum);
+        setProvider(web3Provider);
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const selectedAccount = accounts[0];
+        setAccount(selectedAccount);
       } else {
-        setAccount(null);
-        setIsAdmin(false);
-        setIsVoterRegistered(false);
+        setError('Please install MetaMask!');
+      }
+    } catch (err) {
+      setError(`Error connecting wallet: ${err.message}`);
+    }
+  };
+
+  // This useEffect runs only when the provider or account changes.
+  // This is the CRITICAL FIX to prevent errors on page load.
+  useEffect(() => {
+    const setupContracts = async () => {
+      if (provider && account) {
+        setLoading(true);
+        setError('');
+        try {
+          const signer = await provider.getSigner();
+          const voterRegistry = new ethers.Contract(voterRegistryAddress, voterRegistryABI, signer);
+          
+          const adminAddress = await voterRegistry.electionAdmin();
+          setIsAdmin(adminAddress.toLowerCase() === account.toLowerCase());
+
+          await fetchCandidates();
+        } catch (err) {
+          setError(`Error setting up contracts or checking admin status: ${err.message}`);
+        }
+        setLoading(false);
       }
     };
-    window.ethereum?.on('accountsChanged', handleAccountsChanged);
-    return () => window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
-  }, []);
+    setupContracts();
+  }, [provider, account]);
 
-  async function fetchCandidates() {
-    if (contracts.candContract && contracts.votingCont) {
-      const count = await contracts.candContract.candidatesCount();
-      const candidatesList = [];
-      for (let i = 1; i <= count; i++) {
-        const candidate = await contracts.candContract.candidates(i);
-        const votes = await contracts.votingCont.results(candidate.id);
-        candidatesList.push({ id: Number(candidate.id), name: candidate.name, votes: Number(votes) });
-      }
-      setCandidates(candidatesList);
-    }
-  }
-
-  useEffect(() => {
-    fetchCandidates();
-  }, [contracts]);
-  
-  const handleTransaction = async (txFunction, successMessage) => {
-    setLoading(true);
-    setMessage({ type: '', text: '' });
+  const fetchCandidates = async () => {
+    if (!provider) return;
     try {
-      const tx = await txFunction();
+      const candidateRegistry = new ethers.Contract(candidateRegistryAddress, candidateRegistryABI, provider);
+      const count = await candidateRegistry.candidatesCount();
+      const loadedCandidates = [];
+      for (let i = 1; i <= count; i++) {
+        const candidate = await candidateRegistry.candidates(i);
+        loadedCandidates.push({ id: Number(candidate.id), name: candidate.name });
+      }
+      setCandidates(loadedCandidates);
+    } catch (err) {
+      setError(`Error fetching candidates: ${err.message}`);
+    }
+  };
+
+  const handleAddVoter = async (e) => {
+    e.preventDefault();
+    if (!provider || !voterAddress) return;
+    setLoading(true);
+    setMessage('');
+    setError('');
+    try {
+      const signer = await provider.getSigner();
+      const voterRegistry = new ethers.Contract(voterRegistryAddress, voterRegistryABI, signer);
+      const tx = await voterRegistry.addVoter(voterAddress);
       await tx.wait();
-      setMessage({ type: 'success', text: successMessage });
-      fetchCandidates();
-      // Clear inputs after successful transaction
-      if (successMessage.includes('Candidate')) setCandidateName('');
-      if (successMessage.includes('Voter')) setVoterAddress('');
-    } catch (error) {
-      console.error(error);
-      setMessage({ type: 'danger', text: error.reason || 'Transaction failed.' });
+      setMessage(`Voter ${voterAddress} added successfully!`);
+      setVoterAddress('');
+    } catch (err) {
+      setError(`Error adding voter: ${err.message}`);
+    }
+    setLoading(false);
+  };
+
+  const handleAddCandidate = async (e) => {
+    e.preventDefault();
+    if (!provider || !candidateName) return;
+    setLoading(true);
+    setMessage('');
+    setError('');
+    try {
+      const signer = await provider.getSigner();
+      const candidateRegistry = new ethers.Contract(candidateRegistryAddress, candidateRegistryABI, signer);
+      const tx = await candidateRegistry.addCandidate(candidateName);
+      await tx.wait();
+      setMessage(`Candidate "${candidateName}" added successfully!`);
+      setCandidateName('');
+      await fetchCandidates(); // Refresh candidate list
+    } catch (err) {
+      setError(`Error adding candidate: ${err.message}`);
+    }
+    setLoading(false);
+  };
+
+  const handleStartElection = async (e) => {
+    e.preventDefault();
+    if (!provider || electionDuration <= 0) return;
+    setLoading(true);
+    setMessage('');
+    setError('');
+    try {
+      const signer = await provider.getSigner();
+      const votingContract = new ethers.Contract(votingContractAddress, votingContractABI, signer);
+      const tx = await votingContract.startElection(electionDuration);
+      await tx.wait();
+      setMessage(`Election started for ${electionDuration} minutes!`);
+    } catch (err) {
+      setError(`Error starting election: ${err.message}`);
+    }
+    setLoading(false);
+  };
+
+  const handleVote = async (e) => {
+    e.preventDefault();
+    if (!provider || !selectedCandidate) return;
+    setLoading(true);
+    setMessage('');
+    setError('');
+    try {
+      const signer = await provider.getSigner();
+      const votingContract = new ethers.Contract(votingContractAddress, votingContractABI, signer);
+      const tx = await votingContract.vote(selectedCandidate);
+      await tx.wait();
+      setMessage('Your vote has been cast successfully!');
+    } catch (err) {
+      setError(`Error casting vote: ${err.message}`);
     }
     setLoading(false);
   };
 
   return (
-    <Container className="mt-4">
-      {account ? (
-        <div>
-          <Alert variant="light" className="text-center">Connected Account: <strong>{account}</strong></Alert>
-          {loading && <div className="text-center my-3"><Spinner animation="border" variant="primary" /> <p>Processing Transaction...</p></div>}
-          {message.text && <Alert variant={message.type} onClose={() => setMessage({ type: '', text: '' })} dismissible>{message.text}</Alert>}
+    <Container>
+      {error && <Alert variant="danger">{error}</Alert>}
+      {message && <Alert variant="success">{message}</Alert>}
+
+      {!account ? (
+        <div className="text-center">
+          <h1>Welcome to the Decentralized Voting System</h1>
+          <p>Please connect your MetaMask wallet to continue.</p>
+          <Button onClick={connectWallet} variant="primary" size="lg">Connect to Wallet</Button>
+        </div>
+      ) : (
+        <>
+          <Alert variant="info">Connected Account: {account}</Alert>
+          {loading && <div className="text-center"><Spinner animation="border" /></div>}
           
-          {/* We now render AdminPanel as a self-contained component and pass props to it */}
-          {isAdmin && 
-            <AdminPanel 
-              candidateName={candidateName}
-              setCandidateName={setCandidateName}
-              voterAddress={voterAddress}
-              setVoterAddress={setVoterAddress}
-              handleTransaction={handleTransaction}
-              contracts={contracts}
-            />
-          }
-          
-          <h2 className="mt-4 text-center">Candidates & Results</h2>
-          <Row>
-            {candidates.length > 0 ? candidates.map((candidate) => (
-              <Col md={4} key={candidate.id} className="mb-3">
-                <Card className="text-center shadow-sm h-100">
+          {isAdmin && (
+            <Row>
+              {/* Admin Panel */}
+              <Col md={12}>
+                <Card className="mb-4">
                   <Card.Body>
-                    <Card.Title className="h5">{candidate.name}</Card.Title>
-                    <Card.Text>
-                      <strong className="display-4">{candidate.votes}</strong>
-                      <br />
-                      Votes
-                    </Card.Text>
-                    {isVoterRegistered && !isAdmin && (
-                      <Button variant="primary" onClick={() => handleTransaction(() => contracts.votingCont.vote(candidate.id), 'Vote cast successfully!')}>
-                        Vote for {candidate.name}
-                      </Button>
-                    )}
+                    <Card.Title>Admin Panel</Card.Title>
+                    {/* Add Voter */}
+                    <Form onSubmit={handleAddVoter}>
+                      <Form.Group controlId="voterAddress" className="mb-3">
+                        <Form.Label>Add Voter Address</Form.Label>
+                        <Form.Control 
+                          type="text" 
+                          placeholder="Enter voter's Ethereum address" 
+                          value={voterAddress} 
+                          onChange={(e) => setVoterAddress(e.target.value)} 
+                        />
+                      </Form.Group>
+                      <Button type="submit" variant="secondary" disabled={loading}>Add Voter</Button>
+                    </Form>
+                    <hr />
+                    {/* Add Candidate */}
+                    <Form onSubmit={handleAddCandidate}>
+                       <Form.Group controlId="candidateName" className="mb-3">
+                        <Form.Label>Add Candidate Name</Form.Label>
+                        <Form.Control 
+                          type="text" 
+                          placeholder="Enter candidate's name" 
+                          value={candidateName} 
+                          onChange={(e) => setCandidateName(e.target.value)} 
+                        />
+                      </Form.Group>
+                      <Button type="submit" variant="secondary" disabled={loading}>Add Candidate</Button>
+                    </Form>
+                    <hr />
+                     {/* Start Election */}
+                    <Form onSubmit={handleStartElection}>
+                       <Form.Group controlId="electionDuration" className="mb-3">
+                        <Form.Label>Start Election (in minutes)</Form.Label>
+                        <Form.Control 
+                          type="number" 
+                          placeholder="Enter duration in minutes" 
+                          value={electionDuration} 
+                          onChange={(e) => setElectionDuration(e.target.value)} 
+                        />
+                      </Form.Group>
+                      <Button type="submit" variant="warning" disabled={loading}>Start Election</Button>
+                    </Form>
                   </Card.Body>
                 </Card>
               </Col>
-            )) : <p className="text-center text-muted">No candidates have been added yet.</p>}
+            </Row>
+          )}
+
+          <Row>
+            {/* Voting Panel */}
+            <Col md={6}>
+              <Card>
+                <Card.Body>
+                  <Card.Title>Cast Your Vote</Card.Title>
+                   {candidates.length > 0 ? (
+                    <Form onSubmit={handleVote}>
+                      <Form.Group controlId="selectCandidate" className="mb-3">
+                        <Form.Label>Select a Candidate</Form.Label>
+                        <Form.Select 
+                          value={selectedCandidate} 
+                          onChange={(e) => setSelectedCandidate(e.target.value)}
+                        >
+                          <option value="">-- Please choose an option --</option>
+                          {candidates.map(candidate => (
+                            <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
+                          ))}
+                        </Form.Select>
+                      </Form.Group>
+                      <Button type="submit" variant="primary" disabled={loading}>Vote</Button>
+                    </Form>
+                  ) : (
+                    <p>No candidates have been added yet.</p>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+            {/* Results Panel */}
+            <Col md={6}>
+              <Card>
+                <Card.Body>
+                  <Card.Title>Candidates & Results</Card.Title>
+                  {candidates.length > 0 ? (
+                     <ul>
+                      {candidates.map(candidate => (
+                        <li key={candidate.id}>{candidate.name}</li> // Simplified for now
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>Results will be shown here after the election ends.</p>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
           </Row>
-        </div>
-      ) : (
-        <div className="text-center mt-5">
-            <Card className="p-4 shadow-lg">
-                <h2>Welcome to the Decentralized Voting System</h2>
-                <p>Please connect your MetaMask wallet to participate.</p>
-                <Button variant="primary" size="lg" onClick={connectWallet}>Connect Wallet</Button>
-            </Card>
-        </div>
+        </>
       )}
     </Container>
   );
-}
+};
 
-export default HomePage;
+export default HomeScreen;
