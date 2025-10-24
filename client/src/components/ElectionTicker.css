@@ -1,0 +1,34 @@
+/* client/src/components/ElectionTicker.css */
+
+.ticker-wrap {
+  background-color: #343a40; /* Dark background */
+  color: #ffffff;
+  padding: 10px 0;
+  overflow: hidden;
+  width: 100%;
+  border-bottom: 2px solid #007bff; /* Blue accent */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.ticker-item {
+  display: flex;
+  align-items: center;
+  margin: 0 40px; /* Space between items */
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.ticker-item strong {
+  color: #00e5ff; /* Bright blue for labels */
+  margin-right: 8px;
+}
+
+.ticker-item i {
+  color: #cddc39; /* Lime green for quotes */
+}
+
+.ticker-icon {
+  margin-right: 10px;
+  font-size: 1.1rem;
+  color: #ffffff;
+}

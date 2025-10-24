@@ -1,14 +1,46 @@
 /* client/src/App.css */
 
 .main-container {
-  min-height: 80vh; /* This is the key to scrolling! Ensures the content area is large enough. */
+  min-height: 80vh;
   padding-top: 2rem;
   padding-bottom: 2rem;
+  flex-grow: 1; /* Ensures content fills space */
 }
 
 .footer {
-  background-color: #f8f9fa; /* Light grey background */
-  padding: 1rem 0;
+  background-color: #f8f9fa;
+  padding: 1.5rem 0;
   text-align: center;
-  margin-top: auto; /* Pushes the footer to the bottom of the page */
+  margin-top: auto; /* Pushes footer to bottom */
+  border-top: 1px solid #e0e0e0;
+}
+
+/* New styles for the results list */
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.1rem;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.result-item:last-child {
+  border-bottom: none;
+}
+
+.result-item.leader {
+  font-weight: bold;
+  font-size: 1.2rem;
+  color: #28a745; /* Green for the leader */
+}
+
+.candidate-name {
+  display: flex;
+  align-items: center;
+}
+
+.candidate-votes {
+  font-weight: bold;
+  color: #007bff; /* Blue for the vote count */
 }

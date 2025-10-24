@@ -2,16 +2,17 @@
 
 body {
   margin: 0;
-  font-family: 'Poppins', sans-serif !important; /* Sets the default font for the whole app */
+  font-family: 'Poppins', sans-serif !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f4f7f6 !important; /* Light grey background */
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* Ensures the body takes up at least the full screen height */
+  min-height: 100vh;
 }
 
 #root {
   display: flex;
   flex-direction: column;
-  flex-grow: 1; /* Allows the main content to push the footer down */
+  flex-grow: 1;
 }
