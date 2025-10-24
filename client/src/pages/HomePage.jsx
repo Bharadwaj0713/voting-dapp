@@ -114,8 +114,7 @@ const HomePage = () => {
       for (let i = 1; i <= count; i++) {
         const candidate = await candidateRegistry.candidates(i);
         
-        // --- !!! ఇదే ఫైనల్ ఫిక్స్ !!! ---
-        // 'getResult()' బదులుగా 'results()'ను వాడుతున్నాం
+        // లైవ్ రిజల్ట్స్ కోసం 'results()'ను వాడుతున్నాం
         const votes = await votingContract.results(candidate.id);
         
         loadedCandidates.push({ 
@@ -151,7 +150,12 @@ const HomePage = () => {
       setMessage(`Voter ${voterAddress} added!`);
       setVoterAddress('');
     } catch (err) {
-      setError(`Error: ${err.message}`);
+      // --- స్టైలిష్ ఎర్రర్ హ్యాండ్లింగ్ ---
+      if (err.message && err.message.includes("User denied transaction signature")) {
+        setError("Transaction cancelled by user.");
+      } else {
+        setError("An error occurred while adding voter.");
+      }
     }
     setLoading(false);
   };
@@ -169,7 +173,12 @@ const HomePage = () => {
       setCandidateName('');
       await fetchCandidatesAndStatus(); // రిఫ్రెష్
     } catch (err) {
-      setError(`Error: ${err.message}`);
+      // --- స్టైలిష్ ఎర్రర్ హ్యాండ్లింగ్ ---
+      if (err.message && err.message.includes("User denied transaction signature")) {
+        setError("Transaction cancelled by user.");
+      } else {
+        setError("An error occurred while adding candidate.");
+      }
     }
     setLoading(false);
   };
@@ -186,25 +195,63 @@ const HomePage = () => {
       setMessage(`Election started!`);
       await fetchCandidatesAndStatus(); // రిఫ్రెష్
     } catch (err) {
-      setError(`Error: ${err.message}`);
+      // --- స్టైలిష్ ఎర్రర్ హ్యాండ్లింగ్ ---
+      if (err.message && err.message.includes("User denied transaction signature")) {
+        setError("Transaction cancelled by user.");
+      } else if (err.message && err.message.includes("Election has already started")) {
+        setError("The election has already been started.");
+      } else {
+        setError("An error occurred while starting the election.");
+      }
     }
     setLoading(false);
   };
 
+  // --- !!! ఇదే స్టైలిష్ ఎర్రర్ హ్యాండ్లింగ్‌తో అప్‌డేట్ అయిన ఫంక్షన్ !!! ---
   const handleVote = async (e) => {
     e.preventDefault();
     if (!provider || !selectedCandidate) return;
-    setLoading(true); setMessage(''); setError('');
+    
+    setLoading(true);
+    setMessage('');
+    setError(''); // పాత ఎర్రర్స్‌ను క్లియర్ చేయండి
+
     try {
       const signer = await provider.getSigner();
       const votingContract = new ethers.Contract(votingContractAddress, votingContractABI, signer);
+      
       const tx = await votingContract.vote(selectedCandidate);
       await tx.wait();
-      setMessage('Vote cast successfully!');
-      await fetchCandidatesAndStatus(); // రిఫ్రెష్
+      
+      setMessage('Vote cast successfully!'); // విజయవంతమైన మెసేజ్
+      await fetchCandidatesAndStatus(); // రిజల్ట్స్‌ను రిఫ్రెష్ చేయండి
+
     } catch (err) {
-      setError(`Error: ${err.message}`);
+      // --- !!! ఇదే అసలైన ఫిక్స్ !!! ---
+      // ఇక్కడ మనం 'రా' ఎర్రర్‌ను చదువుతున్నాం
+      
+      if (err.message && err.message.includes("You have already voted.")) {
+        // ఇది మనకు కావలసిన "స్టైలిష్" మెసేజ్
+        setError("You have already cast your vote. You cannot vote twice.");
+      } 
+      else if (err.message && err.message.includes("User denied transaction signature")) {
+        // ఒకవేళ యూజర్ MetaMaskలో "Reject" నొక్కితే
+        setError("Transaction cancelled. Your vote was not cast.");
+      }
+      else if (err.message && err.message.includes("You are not registered to vote.")) {
+         setError("You are not a registered voter. Please contact the admin.");
+      }
+      else if (err.message && err.message.includes("Election has not started yet or has ended")) {
+         setError("The election is not currently active.");
+      }
+      else {
+        // ఏదైనా తెలియని ఎర్రర్ వస్తే
+        setError("An unknown error occurred. Please try again.");
+        console.error("Full error:", err); // డీబగ్గింగ్ కోసం దీన్ని కన్సోల్‌లో ఉంచుదాం
+      }
+      // --- ఫిక్స్ పూర్తయింది ---
     }
+    
     setLoading(false);
   };
 
@@ -226,7 +273,7 @@ const HomePage = () => {
           <Card className="text-center p-4 shadow-sm">
             <Card.Body>
               <Card.Title as="h1">Welcome to the Decentralized Voting System</Card.Title>
-              <Card.Text>Please connect your MetaMask wallet to continue.</Card.Text>
+              <Card.Text>Please connect your MetaMask wallet to continue.</Card.T>
               <Button onClick={connectWallet} variant="primary" size="lg">Connect to Wallet</Button>
             </Card.Body>
           </Card>
