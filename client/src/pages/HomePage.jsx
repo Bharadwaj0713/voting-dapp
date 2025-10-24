@@ -1,9 +1,10 @@
 // client/src/pages/HomePage.jsx
-import { FaVoteYea } from 'react-icons/fa'; // <-- ADD THIS LINE
+
 import { useState, useEffect } from 'react';
 import { Container, Form, Button, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { ethers } from 'ethers';
-import ElectionTicker from '../components/ElectionTicker'; // <-- Import the new Ticker
+import ElectionTicker from '../components/ElectionTicker'; // Tickerని ఇంపోర్ట్ చేస్తున్నాం
+import { FaVoteYea } from 'react-icons/fa'; // రిజల్ట్స్ ఐకాన్‌ను ఇంపోర్ట్ చేస్తున్నాం
 import {
   voterRegistryAddress,
   candidateRegistryAddress,
@@ -26,7 +27,7 @@ const HomePage = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- NEW STATES FOR THE TICKER ---
+  // --- టిక్కర్ కోసం కొత్త స్టేట్స్ ---
   const [electionEndTime, setElectionEndTime] = useState(0);
   const [countdown, setCountdown] = useState("");
   const [leader, setLeader] = useState(null);
@@ -48,7 +49,7 @@ const HomePage = () => {
     }
   };
 
-  // --- NEW: useEffect for Countdown Timer ---
+  // --- కౌంట్‌డౌన్ టైమర్ కోసం ---
   useEffect(() => {
     if (electionEndTime === 0) return;
 
@@ -73,7 +74,7 @@ const HomePage = () => {
     return () => clearInterval(interval); // Cleanup interval
   }, [electionEndTime]);
 
-  // This runs when provider or account changes
+  // వాలెట్ కనెక్ట్ అయినప్పుడు రన్ అవుతుంది
   useEffect(() => {
     const setupContracts = async () => {
       if (provider && account) {
@@ -86,7 +87,7 @@ const HomePage = () => {
           const adminAddress = await voterRegistry.electionAdmin();
           setIsAdmin(adminAddress.toLowerCase() === account.toLowerCase());
 
-          await fetchCandidatesAndStatus(); // Fetch all data
+          await fetchCandidatesAndStatus(); // మొత్తం డేటాను తెస్తుంది
         } catch (err) {
           setError(`Error setting up contracts: ${err.message}`);
         }
@@ -96,23 +97,26 @@ const HomePage = () => {
     setupContracts();
   }, [provider, account]);
 
-  // --- UPDATED to fetch candidates AND election status ---
+  // --- కాండిడేట్లు మరియు ఎలక్షన్ స్టేటస్‌ను తెచ్చే ఫంక్షన్ ---
   const fetchCandidatesAndStatus = async () => {
     if (!provider) return;
     try {
       const candidateRegistry = new ethers.Contract(candidateRegistryAddress, candidateRegistryABI, provider);
       const votingContract = new ethers.Contract(votingContractAddress, votingContractABI, provider);
       
-      // Fetch election end time
+      // ఎలక్షన్ ఎండ్ టైమ్‌ను తెస్తుంది
       const endTime = await votingContract.electionEndTime();
       setElectionEndTime(Number(endTime));
       
-      // Fetch candidates and votes
+      // కాండిడేట్లు మరియు ఓట్లను తెస్తుంది
       const count = await candidateRegistry.candidatesCount();
       const loadedCandidates = [];
       for (let i = 1; i <= count; i++) {
         const candidate = await candidateRegistry.candidates(i);
-        const votes = await votingContract.getResult(candidate.id);
+        
+        // --- !!! ఇదే ఫైనల్ ఫిక్స్ !!! ---
+        // 'getResult()' బదులుగా 'results()'ను వాడుతున్నాం
+        const votes = await votingContract.results(candidate.id);
         
         loadedCandidates.push({ 
           id: Number(candidate.id), 
@@ -122,7 +126,7 @@ const HomePage = () => {
       }
       setCandidates(loadedCandidates);
 
-      // --- NEW: Find the leader ---
+      // --- లీడర్‌ను కనుగొంటుంది ---
       if (loadedCandidates.length > 0) {
         const sortedCandidates = [...loadedCandidates].sort((a, b) => b.votes - a.votes);
         setLeader(sortedCandidates[0]);
@@ -163,7 +167,7 @@ const HomePage = () => {
       await tx.wait();
       setMessage(`Candidate "${candidateName}" added!`);
       setCandidateName('');
-      await fetchCandidatesAndStatus(); // Refresh
+      await fetchCandidatesAndStatus(); // రిఫ్రెష్
     } catch (err) {
       setError(`Error: ${err.message}`);
     }
@@ -180,7 +184,7 @@ const HomePage = () => {
       const tx = await votingContract.startElection(electionDuration);
       await tx.wait();
       setMessage(`Election started!`);
-      await fetchCandidatesAndStatus(); // Refresh
+      await fetchCandidatesAndStatus(); // రిఫ్రెష్
     } catch (err) {
       setError(`Error: ${err.message}`);
     }
@@ -197,7 +201,7 @@ const HomePage = () => {
       const tx = await votingContract.vote(selectedCandidate);
       await tx.wait();
       setMessage('Vote cast successfully!');
-      await fetchCandidatesAndStatus(); // Refresh
+      await fetchCandidatesAndStatus(); // రిఫ్రెష్
     } catch (err) {
       setError(`Error: ${err.message}`);
     }
@@ -205,7 +209,7 @@ const HomePage = () => {
   };
 
   return (
-    <> {/* Use Fragment to allow ticker outside container */}
+    <> {/* టిక్కర్‌ను కంటైనర్ బయట ఉంచడానికి ఫ్రాగ్మెంట్ */}
       {account && (
         <ElectionTicker 
           leader={leader} 
@@ -214,12 +218,12 @@ const HomePage = () => {
         />
       )}
 
-      <Container className="main-container"> {/* main-container from App.css */}
+      <Container className="main-container">
         {error && <Alert variant="danger">{error}</Alert>}
         {message && <Alert variant="success">{message}</Alert>}
 
         {!account ? (
-          <Card className="text-center p-4">
+          <Card className="text-center p-4 shadow-sm">
             <Card.Body>
               <Card.Title as="h1">Welcome to the Decentralized Voting System</Card.Title>
               <Card.Text>Please connect your MetaMask wallet to continue.</Card.Text>
@@ -238,7 +242,7 @@ const HomePage = () => {
                 <Card.Header as="h5" style={{ backgroundColor: '#ffc107' }}>Admin Panel</Card.Header>
                 <Card.Body>
                   <Row>
-                    <Col md={4}>
+                    <Col md={4} className="mb-3">
                       <Form onSubmit={handleAddVoter}>
                         <Form.Group controlId="voterAddress" className="mb-3">
                           <Form.Label>Add Voter Address</Form.Label>
@@ -247,7 +251,7 @@ const HomePage = () => {
                         <Button type="submit" variant="secondary" disabled={loading}>Add Voter</Button>
                       </Form>
                     </Col>
-                    <Col md={4}>
+                    <Col md={4} className="mb-3">
                       <Form onSubmit={handleAddCandidate}>
                         <Form.Group controlId="candidateName" className="mb-3">
                           <Form.Label>Add Candidate Name</Form.Label>
@@ -256,7 +260,7 @@ const HomePage = () => {
                         <Button type="submit" variant="secondary" disabled={loading}>Add Candidate</Button>
                       </Form>
                     </Col>
-                    <Col md={4}>
+                    <Col md={4} className="mb-3">
                       <Form onSubmit={handleStartElection}>
                         <Form.Group controlId="electionDuration" className="mb-3">
                           <Form.Label>Start Election (in minutes)</Form.Label>
