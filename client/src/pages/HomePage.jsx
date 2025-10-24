@@ -207,7 +207,6 @@ const HomePage = () => {
     setLoading(false);
   };
 
-  // --- !!! ఇదే స్టైలిష్ ఎర్రర్ హ్యాండ్లింగ్‌తో అప్‌డేట్ అయిన ఫంక్షన్ !!! ---
   const handleVote = async (e) => {
     e.preventDefault();
     if (!provider || !selectedCandidate) return;
@@ -227,15 +226,11 @@ const HomePage = () => {
       await fetchCandidatesAndStatus(); // రిజల్ట్స్‌ను రిఫ్రెష్ చేయండి
 
     } catch (err) {
-      // --- !!! ఇదే అసలైన ఫిక్స్ !!! ---
-      // ఇక్కడ మనం 'రా' ఎర్రర్‌ను చదువుతున్నాం
-      
+      // --- స్టైలిష్ ఎర్రర్ హ్యాండ్లింగ్ ---
       if (err.message && err.message.includes("You have already voted.")) {
-        // ఇది మనకు కావలసిన "స్టైలిష్" మెసేజ్
         setError("You have already cast your vote. You cannot vote twice.");
       } 
       else if (err.message && err.message.includes("User denied transaction signature")) {
-        // ఒకవేళ యూజర్ MetaMaskలో "Reject" నొక్కితే
         setError("Transaction cancelled. Your vote was not cast.");
       }
       else if (err.message && err.message.includes("You are not registered to vote.")) {
@@ -245,11 +240,9 @@ const HomePage = () => {
          setError("The election is not currently active.");
       }
       else {
-        // ఏదైనా తెలియని ఎర్రర్ వస్తే
         setError("An unknown error occurred. Please try again.");
-        console.error("Full error:", err); // డీబగ్గింగ్ కోసం దీన్ని కన్సోల్‌లో ఉంచుదాం
+        console.error("Full error:", err); 
       }
-      // --- ఫిక్స్ పూర్తయింది ---
     }
     
     setLoading(false);
@@ -273,7 +266,8 @@ const HomePage = () => {
           <Card className="text-center p-4 shadow-sm">
             <Card.Body>
               <Card.Title as="h1">Welcome to the Decentralized Voting System</Card.Title>
-              <Card.Text>Please connect your MetaMask wallet to continue.</Card.T>
+              {/* --- !!! ఇదే ఫైనల్ ఫిక్స్ !!! --- */}
+              <Card.Text>Please connect your MetaMask wallet to continue.</Card.Text>
               <Button onClick={connectWallet} variant="primary" size="lg">Connect to Wallet</Button>
             </Card.Body>
           </Card>
