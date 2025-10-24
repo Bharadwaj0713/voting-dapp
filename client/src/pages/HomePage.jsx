@@ -1,5 +1,5 @@
 // client/src/pages/HomePage.jsx
-
+import { FaVoteYea } from 'react-icons/fa'; // <-- ADD THIS LINE
 import { useState, useEffect } from 'react';
 import { Container, Form, Button, Card, Row, Col, Alert, Spinner } from 'react-bootstrap';
 import { ethers } from 'ethers';
